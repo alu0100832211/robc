@@ -101,10 +101,10 @@ p=[float(i) for i in sys.argv[1:nvar+1]]
 
 # Parámetros D-H:
 #        1    2
-d  = [p[0], 0, 0, 0, 0, 0]
-th = [0, p[1], 0, 0, p[4]/2, -p[4]/2] #th/2 para que al poner el ángulo lo divida en 2
-a  = [0, 5, p[2], 0, 2, 2]
-al = [0, 0, 0, p[3], 90, -90]
+d  = [p[0], 0, 0, 0, 0, 0, 0]
+th = [0, p[1], 0, -90, 90+p[3], -90+p[4], -90-p[4]] #th/2 para que al poner el ángulo lo divida en 2
+a  = [0, 5, p[2], 0, 0, 2, 2]
+al = [0, 0, 0, -90, -90, 0, 0]
 
 # Orígenes para cada articulación
 o00=[0,0,0,1]
@@ -112,32 +112,41 @@ o11=[0,0,0,1]
 o22=[0,0,0,1]
 o33=[0,0,0,1]
 o44=[0,0,0,1]
-o5151=[0,0,0,1]
-o5252=[0,0,0,1]
+o55=[0,0,0,1]
+o66=[0,0,0,1]
+o77=[0,0,0,1]
+o88=[0,0,0,1]
 
 # Cálculo matrices transformación
 T01=matriz_T(d[0], th[0], a[0], al[0])
 T12=matriz_T(d[1], th[1], a[1], al[1])
 T23=matriz_T(d[2], th[2], a[2], al[2])
 T34=matriz_T(d[3], th[3], a[3], al[3])
-T451=matriz_T(d[4], th[4], a[4], al[4])
-T452=matriz_T(d[5], th[5], a[5], al[5])
+T45=matriz_T(d[4], th[4], a[4], al[4])
+T56=matriz_T(d[5], th[5], a[5], al[5])
+#T58=matriz_T(d[7], th[7], a[7], al[7])
+T57=matriz_T(d[6], th[6], a[6], al[6])
+
 T02=np.dot(T01, T12)
 T03=np.dot(T02, T23)
 T04=np.dot(T03, T34)
-T051=np.dot(T04, T451)
-T052=np.dot(T04, T452)
+T05=np.dot(T04, T45)
+T06=np.dot(T05, T56)
+T07=np.dot(T05, T57)
+#T08=np.dot(T03, T34)
+
 
 # Transformación de cada articulación
 o10 =np.dot(T01, o11).tolist()
 o20 =np.dot(T02, o22).tolist()
 o30 =np.dot(T03, o33).tolist()
 o40 =np.dot(T04, o44).tolist()
-o510 =np.dot(T051, o5151).tolist()
-o520 =np.dot(T052, o5252).tolist()
+o50 =np.dot(T05, o55).tolist()
+o60 =np.dot(T06, o66).tolist()
+o70 =np.dot(T07, o77).tolist()
 
 # Mostrar resultado de la cinemática directa
-muestra_origenes([o00,o10,o20, o30, o40, o510, o520])
-muestra_robot   ([o00,o10,o20, o30, o40, o510, o40, o520])
+muestra_origenes([o00, o10, o20, o30, o40, o50, o60, o70])
+muestra_robot   ([o00, o10, o20, o30, o40, o50, o60, o50, o70])
 
 input()
