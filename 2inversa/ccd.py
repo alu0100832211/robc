@@ -11,6 +11,7 @@ from math import *
 import numpy as np
 import matplotlib.pyplot as plt
 import colorsys as cs
+import pdb
 
 # ******************************************************************************
 # Declaración de funciones
@@ -38,7 +39,7 @@ def muestra_robot(O,obj):
 
 def matriz_T(d,th,a,al):
   # Calcula la matriz T (ángulos de entrada en grados)
-  
+
   return [[cos(th), -sin(th)*cos(al),  sin(th)*sin(al), a*cos(th)]
          ,[sin(th),  cos(th)*cos(al), -sin(al)*cos(th), a*sin(th)]
          ,[      0,          sin(al),          cos(al),         d]
@@ -60,7 +61,7 @@ def cin_dir(th,a):
 # Cálculo de la cinemática inversa de forma iterativa por el método CCD
 
 # valores articulares arbitrarios para la cinemática directa inicial
-th=[0.,0.,0.]
+th=[0.,3.14,0.]
 a =[5.,5.,5.]
 L = sum(a) # variable para representación gráfica
 EPSILON = .01
@@ -80,20 +81,20 @@ muestra_origenes(O[0])
 dist = float("inf")
 prev = 0.
 iteracion = 1
+
+pdb.set_trace()
+
 while (dist > EPSILON and abs(prev-dist) > EPSILON/100.):
   prev = dist
   # Para cada combinación de articulaciones:
   for i in range(len(th)):
     # cálculo de la cinemática inversa:
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+    #dist = math.sqrt(pow(O))
+
     O[i+1] = cin_dir(th,a)
 
   dist = np.linalg.norm(np.subtract(objetivo,O[-1][-1]))
