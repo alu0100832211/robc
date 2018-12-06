@@ -51,48 +51,30 @@ def mostrar(objetivos,ideal,trayectoria):
   objT   = np.array(objetivos).T.tolist()
   plt.plot(objT[0],objT[1],'-.o')
   plt.show()
-  raw_input()
+  input()
   plt.clf()
 
-def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
+def localizacion(balizas, real, ideal, centro, radio, mostrar=0): # centro a partir de donde busca
   # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
-  # sensorial, dentro de una regi�n cuadrada de centro "centro" y lado "2*radio".
-
-  # Medidas del robot real
+  # sensorial, dentro de una regi�n concreta.
+  mejor_pose = []
+  mejor_peso = -1
   medidas = real.sense(balizas)
-
-  # Probar moviendo las posiciones del robot ideal
-  # En cada posicion de la matriz
-  N = 7 # Matriz NxN
-  if (N % 2) is 0: # ==> N tiene que ser impar !!!
-      N += 1
-
-  distCelda = float(2*radio/float(N))
-
-  # Estructura para almacenar pesos
-  imagen = [[-1. for x in range(N)] for y in range(N)]
-  xyCentro = [N/2, N/2]
-
-  mejor_peso = float("-inf")
-  # Guardar peso al mover el robot a una casilla de la matriz
-  for i in range(N):
-      for j in range(N):
-          #Mover robot ideal a esa posicion
-          #Nueva x:
-          xyTransform = np.subtract([i, j], xyCentro)
-          xyIdeal = np.add(xyTransform, centro)
-          
-
-          ideal.set(xyIdeal[0], xyIdeal[0], real.orientation)
-
-          peso = ideal.measurement_prob(medidas, objetivos)
-
-          if (maxPeso < peso):
-              maxPeso = peso
-              xyMaxPeso = ideal.pose()
-          imagen[i][j] = peso
-
-  ideal.set(*xyMaxPeso)
+  #radio = metros en los que se va a buscar
+  PRECISION = 0.05 #Metros que representa cada posicion de la matriz
+  r = int(radio/PRECISION) # Como de lejos se va a buscar
+  imagen = [[float('nan') for i in range(2*r)] for j in range(2*r)] # matriz
+  for i in range(2*N): # recorre la matriz de la imagen
+    for j in range(2*N):
+      x = centro[0]+(j-N)*PRECISION # Ponemos el robot ideal en todas las posiciones.
+      y = centro[1]+(i-N)*PRECISION
+      ideal.set(x,y,ideal.orientation)
+      peso = ideal.measurement_prob(medidas,balizas); # Compara la medida con el robot ideal
+      if peso > mejor_peso: # Cuanto menor sea la distancia mayor será la probabilidad
+        mejor_peso = peso
+        mejor_pose = ideal.pose()
+      imagen[i][j] = peso
+  ideal.set(*mejor_pose)
 
   if mostrar:
     plt.ion() # modo interactivo
@@ -106,7 +88,7 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2)
     plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2)
     plt.show()
-    raw_input()
+    input()
     plt.clf()
 
 # ******************************************************************************
@@ -148,8 +130,9 @@ real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
 
-random.seed(0)
-tray_ideal = [ideal.pose()]   # Trayectoria percibida
+random.seed(datetime.now())
+localizacion(objetivos,real,ideal,[2,2],3,mostrar=1)
+tray_ideal = [ideal.pose()]  # Trayectoria percibida
 tray_real = [real.pose()]     # Trayectoria seguida
 
 tiempo  = 0.
@@ -159,9 +142,6 @@ random.seed(datetime.now())
 for punto in objetivos:
   while distancia(tray_ideal[-1],punto) > EPSILON and len(tray_ideal) <= 1000:
     pose = ideal.pose()
-
-    if(distancia(tray_ideal[-1], tray_real[-1]) > EPSILON):
-        localizacion(objetivos, real, ideal, ideal.pose(), 1, mostrar=1)
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
@@ -174,7 +154,12 @@ for punto in objetivos:
       if GIROPARADO and abs(w) > .01:
         v = 0
       ideal.move(w,v)
-      real.move(w,v) #se calcula w,v en función del ideal y se mueve el real
+      real.move(w,v)
+      medidas1 = real.sense(objetivos)
+      #esto en realidad no es probabilidad, es un peso
+      prob1 = ideal.measurement_prob(medidas1,objetivos);
+      if(prob1 < 0.80):
+        localizacion(objetivos, real, ideal, ideal.pose(), 0.3, mostrar=0)
     else:
       ideal.move_triciclo(w,v,LONGITUD)
       real.move_triciclo(w,v,LONGITUD)
@@ -185,8 +170,8 @@ for punto in objetivos:
     tiempo  += 1
 
 if len(tray_ideal) > 1000:
-  print "<!> Trayectoria muy larga - puede que no se haya alcanzado la posici�n final."
-print "Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s"
-print "Distancia real al objetivo: "+\
-    str(round(distancia(tray_real[-1],objetivos[-1]),3))+"m"
+  print ("<!> Trayectoria muy larga - puede que no se haya alcanzado la posici�n final.")
+print ("Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s")
+print ("Distancia real al objetivo: "+\
+    str(round(distancia(tray_real[-1],objetivos[-1]),3))+"m")
 mostrar(objetivos,tray_ideal,tray_real)  # Representaci�n gr�fica

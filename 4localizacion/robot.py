@@ -87,6 +87,11 @@ class robot:
     # Calcular la probabilidad de una medida.
     self.weight = 1.
     for i in range(len(measurements)-1):
+        #Devuelve un valor que representa la cercania con ese valor
+        #Cuanto mas se acerque a 3.98, mejor
+        # DUDA: por qué no hacer la diferencia?
+        #Gaussian(mu = dist. baliza, sigma = noise, dist. baliza medida)
+        #a = sense1(landmarks[i],0) = distancia a baliza i
       self.weight *= self.Gaussian(self.sense1(landmarks[i],0),\
                             self.sense_noise, measurements[i]) #probabilidad
     diff = self.orientation - measurements[-1]
