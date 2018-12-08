@@ -63,36 +63,40 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
 
   # Probar moviendo las posiciones del robot ideal
   # En cada posicion de la matriz
-  N = 7 # Matriz NxN
-  if (N % 2) is 0: # ==> N tiene que ser impar !!!
-      N += 1
 
-  distCelda = float(2*radio/float(N))
+  distCelda = float(2.0*float(radio)/float(N))
 
-  # Estructura para almacenar pesos
+
+  def posCasilla(fila, columna, ancho):
+     x = columna*ancho + ancho/2
+     y = fila*ancho + ancho/2
+     return [x,y]
+
   imagen = [[-1. for x in range(N)] for y in range(N)]
-  xyCentro = [N/2, N/2]
 
-  mejor_peso = float("-inf")
+  xyCentro = posCasilla(N/2, N/2, distCelda)
+  idealCentro = [centro[0], centro[1]]
+  maxPeso = float("-inf")
+
   # Guardar peso al mover el robot a una casilla de la matriz
   for i in range(N):
       for j in range(N):
           #Mover robot ideal a esa posicion
           #Nueva x:
-          xyTransform = np.subtract([i, j], xyCentro)
-          xyIdeal = np.add(xyTransform, centro)
-          
+          xyCasilla = posCasilla(i, j, distCelda)
+          xyTransform = np.subtract(xyCasilla, xyCentro)
+          xyIdeal = np.add(xyTransform, idealCentro)
 
-          ideal.set(xyIdeal[0], xyIdeal[0], real.orientation)
+          ideal.set(xyIdeal[0], xyIdeal[1], medidas[-1])
 
           peso = ideal.measurement_prob(medidas, objetivos)
 
           if (maxPeso < peso):
               maxPeso = peso
               xyMaxPeso = ideal.pose()
+
           imagen[i][j] = peso
 
-  ideal.set(*xyMaxPeso)
 
   if mostrar:
     plt.ion() # modo interactivo
@@ -102,13 +106,16 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     plt.imshow(imagen,extent=[centro[0]-radio,centro[0]+radio,\
                               centro[1]-radio,centro[1]+radio])
     balT = np.array(balizas).T.tolist();
-    plt.plot(balT[0],balT[1],'or',ms=10)
-    plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2)
-    plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2)
+    plt.plot(balT[0],balT[1],'or',ms=10) #rojo
+    plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2) #magenta
+    ideal.set(*xyMaxPeso)
+    plt.plot(ideal.x,ideal.y,'D',c='#00ffff',ms=10,mew=2) #cyan
+    plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2) #verde
     plt.show()
     raw_input()
     plt.clf()
-
+  else:
+    ideal.set(*xyMaxPeso)
 # ******************************************************************************
 
 # Definici�n del robot:
@@ -140,6 +147,23 @@ EPSILON = .1                # Umbral de distancia
 V = V_LINEAL/FPS            # Metros por fotograma
 W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 
+########### PESOS BASADOS EN MÁXIMOS PESOS #####################
+DIVISOR = 50
+PESO_SCRIPT = [ 15/DIVISOR,  55/DIVISOR, 222/DIVISOR, 950/DIVISOR, 3000/DIVISOR]
+############PESOS MÁXIMOS RECOGIDOS / DIVISOR###################
+############# Parámetros para localización #####################
+PESO_LOCALIZACION = PESO_SCRIPT[int(sys.argv[1])]             # Minimo peso en measurement prob
+MAXPESO = float("-inf")
+MINPESO = float("inf")
+
+N = 11 # Matriz NxN
+if (N % 2) is 0: # ==> N tiene que ser impar !!!
+    N += 1
+RADIO = 0.5
+RADIO_INICIAL = 4
+MOSTRAR = 1
+NO_MOSTRAR = 0
+################################################################
 ideal = robot()
 ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
 ideal.set(*P_INICIAL)     # operador 'splat'
@@ -147,6 +171,7 @@ ideal.set(*P_INICIAL)     # operador 'splat'
 real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
+#localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, NO_MOSTRAR)
 
 random.seed(0)
 tray_ideal = [ideal.pose()]   # Trayectoria percibida
@@ -160,8 +185,16 @@ for punto in objetivos:
   while distancia(tray_ideal[-1],punto) > EPSILON and len(tray_ideal) <= 1000:
     pose = ideal.pose()
 
-    if(distancia(tray_ideal[-1], tray_real[-1]) > EPSILON):
-        localizacion(objetivos, real, ideal, ideal.pose(), 1, mostrar=1)
+    medidas = real.sense(objetivos)
+    peso_medidas = ideal.measurement_prob(medidas, objetivos)
+
+    if (MINPESO > peso_medidas):
+        MINPESO = peso_medidas
+    elif (MAXPESO < peso_medidas):
+        MAXPESO = peso_medidas
+
+    if (peso_medidas < PESO_LOCALIZACION):
+        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, NO_MOSTRAR)
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
@@ -190,3 +223,6 @@ print "Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s"
 print "Distancia real al objetivo: "+\
     str(round(distancia(tray_real[-1],objetivos[-1]),3))+"m"
 mostrar(objetivos,tray_ideal,tray_real)  # Representaci�n gr�fica
+
+print "Máximo peso: " + str(MAXPESO)
+print "Mínimo peso: " + str(MINPESO)

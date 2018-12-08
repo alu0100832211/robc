@@ -1,0 +1,10 @@
+* Hay que cambiar algo del programa principal? En el inicio, hay que llamar a localización para darle la posicion inicial al robot?
+* La función gaussiana no está normalizada ¿no? (Es decir, no da valores entre 0 y 1)
+    Entonces, como calcular el MINIMO_PESO adecuado para cada situacion?
+* ¿Por que hay que calcular los pesos como funcion gaussiana, no seria mas simple la diferencia de distancias?
+* ¿Por que al hacer sense() se añade un ruido al angulo del robot?
+    ? Porque cuando el robot intenta medir su angulo lo hace mal.
+    ==> Solo se puede obtener las medidas de las balizas y el angulo con sensores, por eso sense añade ruido
+* Como saber relacionar el peso con la distancia al robot ideal, por ejemplo, ¿que peso hay si estoy 10 centimetros mas lejos?
+* ¿El ángulo que se le pone a ideal es medidas[-1]?
+

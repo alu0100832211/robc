@@ -60,14 +60,14 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0): # centro a par
   mejor_pose = []
   mejor_peso = -1
   medidas = real.sense(balizas)
-  #radio = metros en los que se va a buscar
-  PRECISION = 0.05 #Metros que representa cada posicion de la matriz
+
+  PRECISION = 0.05
   r = int(radio/PRECISION) # Como de lejos se va a buscar
   imagen = [[float('nan') for i in range(2*r)] for j in range(2*r)] # matriz
-  for i in range(2*N): # recorre la matriz de la imagen
-    for j in range(2*N):
-      x = centro[0]+(j-N)*PRECISION # Ponemos el robot ideal en todas las posiciones.
-      y = centro[1]+(i-N)*PRECISION
+  for i in range(2*r): # recorre la matriz de la imagen
+    for j in range(2*r):
+      x = centro[0]+(j-r)*PRECISION # Ponemos el robot ideal en todas las posiciones.
+      y = centro[1]+(i-r)*PRECISION
       ideal.set(x,y,ideal.orientation)
       peso = ideal.measurement_prob(medidas,balizas); # Compara la medida con el robot ideal
       if peso > mejor_peso: # Cuanto menor sea la distancia mayor será la probabilidad
@@ -131,7 +131,7 @@ real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
 
 random.seed(datetime.now())
-localizacion(objetivos,real,ideal,[2,2],3,mostrar=1)
+localizacion(objetivos,real,ideal,[2,2],3,0)
 tray_ideal = [ideal.pose()]  # Trayectoria percibida
 tray_real = [real.pose()]     # Trayectoria seguida
 
@@ -156,10 +156,9 @@ for punto in objetivos:
       ideal.move(w,v)
       real.move(w,v)
       medidas1 = real.sense(objetivos)
-      #esto en realidad no es probabilidad, es un peso
       prob1 = ideal.measurement_prob(medidas1,objetivos);
       if(prob1 < 0.80):
-        localizacion(objetivos, real, ideal, ideal.pose(), 0.3, mostrar=0)
+        localizacion(objetivos, real, ideal, ideal.pose(), 0.3, 0)
     else:
       ideal.move_triciclo(w,v,LONGITUD)
       real.move_triciclo(w,v,LONGITUD)
