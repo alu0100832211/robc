@@ -138,8 +138,8 @@ trayectorias = [
     ]
 
 # Definici�n de los puntos objetivo:
-if len(sys.argv)<2 or int(sys.argv[1])<0 or int(sys.argv[1])>=len(trayectorias):
-  sys.exit(sys.argv[0]+" <�ndice entre 0 y "+str(len(trayectorias)-1)+">")
+if len(sys.argv)<3 or int(sys.argv[1])<0 or int(sys.argv[1])>=len(trayectorias):
+  sys.exit(sys.argv[0]+" <�ndice entre 0 y "+str(len(trayectorias)-1)+">, 1 = no mostrar, 0 = mostrar")
 objetivos = trayectorias[int(sys.argv[1])]
 
 # Definici�n de constantes:
@@ -161,8 +161,7 @@ if (N % 2) is 0: # ==> N tiene que ser impar !!!
     N += 1
 RADIO = 0.5
 RADIO_INICIAL = 4
-MOSTRAR = 1
-NO_MOSTRAR = 0
+MOSTRAR = sys.argv[2]
 ################################################################
 ideal = robot()
 ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
@@ -171,7 +170,7 @@ ideal.set(*P_INICIAL)     # operador 'splat'
 real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
-#localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, NO_MOSTRAR)
+#localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, MOSTRAR)
 
 random.seed(0)
 tray_ideal = [ideal.pose()]   # Trayectoria percibida
@@ -194,7 +193,9 @@ for punto in objetivos:
         MAXPESO = peso_medidas
 
     if (peso_medidas < PESO_LOCALIZACION):
-        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, NO_MOSTRAR)
+        print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
+        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, MOSTRAR)
+        print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
