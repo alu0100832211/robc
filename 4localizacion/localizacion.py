@@ -54,6 +54,9 @@ def mostrar(objetivos,ideal,trayectoria):
   raw_input()
   plt.clf()
 
+def trilateracion(balizas, real)
+'''Metodo que implementa la trilateracion'''
+
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
   # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
   # sensorial, dentro de una regi�n cuadrada de centro "centro" y lado "2*radio".
@@ -149,28 +152,29 @@ W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 
 ########### PESOS BASADOS EN MÁXIMOS PESOS #####################
 DIVISOR = 50
-PESO_SCRIPT = [ 15/DIVISOR,  55/DIVISOR, 222/DIVISOR, 950/DIVISOR, 3000/DIVISOR]
+PESO_SCRIPT = [ 2.9,  6.3, 44.38, 85.88, 371.65]
 ############PESOS MÁXIMOS RECOGIDOS / DIVISOR###################
 ############# Parámetros para localización #####################
 PESO_LOCALIZACION = PESO_SCRIPT[int(sys.argv[1])]             # Minimo peso en measurement prob
 MAXPESO = float("-inf")
 MINPESO = float("inf")
+PESOMEDIO = 0.
+NMEDIDAS = 0
 
 N = 11 # Matriz NxN
-if (N % 2) is 0: # ==> N tiene que ser impar !!!
-    N += 1
+##if (N % 2) is 0: # ==> N tiene que ser impar !!!
+    #N += 1
 RADIO = 0.5
 RADIO_INICIAL = 4
-MOSTRAR = sys.argv[2]
 ################################################################
 ideal = robot()
 ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
-ideal.set(*P_INICIAL)     # operador 'splat'
+#ideal.set(*P_INICIAL)     # operador 'splat'
 
 real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
-#localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, MOSTRAR)
+localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 1)
 
 random.seed(0)
 tray_ideal = [ideal.pose()]   # Trayectoria percibida
@@ -187,15 +191,18 @@ for punto in objetivos:
     medidas = real.sense(objetivos)
     peso_medidas = ideal.measurement_prob(medidas, objetivos)
 
+    NMEDIDAS += 1
+    PESOMEDIO += peso_medidas
+
     if (MINPESO > peso_medidas):
         MINPESO = peso_medidas
     elif (MAXPESO < peso_medidas):
         MAXPESO = peso_medidas
 
     if (peso_medidas < PESO_LOCALIZACION):
-        print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
-        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, MOSTRAR)
-        print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
+        #print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
+        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
+        #print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
@@ -227,3 +234,4 @@ mostrar(objetivos,tray_ideal,tray_real)  # Representaci�n gr�fica
 
 print "Máximo peso: " + str(MAXPESO)
 print "Mínimo peso: " + str(MINPESO)
+print "Peso medio: " + str(PESOMEDIO/NMEDIDAS)
