@@ -70,8 +70,35 @@ def get_index_of_n_min_values(values, n):
 
     return index
 
+def solve_trilateracion(S, r):
+    d = S[1][0]
+    i = S[2][0]
+    j = S[2][1]
+
+    x = (pow(r[0],2) - pow(r[1],2) + pow(d, 2))/(2*d)
+    y = (pow(r[0],2) - pow(r[2],2) + pow(i,2) + pow(j,2))/(2*j)-(i/j)*x
+
+    return [x,y]
+
+
+def rotate_points(theta, Q):
+    #https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions
+    print "Theta =  " + str(theta)
+    R = [[cos(theta), -sin(theta)],
+            [sin(theta), cos(theta)]]
+    S = []
+    for i in range(len(Q)):
+        newX = R[0][0]*Q[i][0] + R[0][1]*Q[i][1]
+        newX = round(newX, 5)
+        print str(newX)
+        newY = R[1][0]*Q[i][0] + R[1][1]*Q[i][1]
+        newY = round(newY, 5)
+        print str(newY)
+        S.append([newX, newY])
+    return S
 
 def trilateracion(balizas, real, ideal):
+    #https://stackoverflow.com/questions/16176656/trilateration-and-locating-the-point-x-y-z
     medidas = real.sense(balizas)
     # posiciones de las 3 balizas más cercanas
     indices = get_index_of_n_min_values(medidas[0:-1], 3)
@@ -80,15 +107,20 @@ def trilateracion(balizas, real, ideal):
     V = np.subtract([0,0], P[0]) # offset
     Q = [np.add(coordenada,V) for coordenada in P] # P + offset
     if (Q[2][1] is not 0): # si Q2 no está en el eje x
+        # ángulo entre Q2 y el eje X
         # θ = acos(Qx / |Q|)
-        theta = acos(Q[2][0]/sqrt(pow(Q[2][0], 2) + pow(Q[2][1], 2))
-        R = [[cos(theta), -sin(theta)],
-            [sin(theta), cos(theta)]]
+        theta = acos(Q[2][0]/sqrt(pow(Q[2][0], 2) + pow(Q[2][1], 2)))
+        S = rotate_points(-theta, Q) #cerrar el ángulo
+        M = solve_trilateracion(S, [medidas[i] for i in indices])
+        print "M " + str(M)
+        M = rotate_points(theta, [M]) #deshacer rotacion
+    else:
+        M = solve_trilateracion(S, [medidas[i] for i in indices])
+    M = np.subtract(M, V) #deshacer offset
+    #Mover el robot a M
+    ideal.set(M[0], M[1], medidas[-1])
 
-        S = []
-        for i in range(3):
-           S.append([np.sum(np.dot(R[0], Q[i][0])],
-               [np.sum(np.dot(R[1], Q[i][1])])
+
 
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
   # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
