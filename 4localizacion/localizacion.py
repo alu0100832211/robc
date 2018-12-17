@@ -54,8 +54,39 @@ def mostrar(objetivos,ideal,trayectoria):
   raw_input()
   plt.clf()
 
-def trilateracion(balizas, real)
-'''Metodo que implementa la trilateracion'''
+def get_index_of_n_min_values(values, n):
+    index = []
+    min_values = []
+    last_min = float("inf")
+    last_index = 0
+    for i in range(n):
+        for value in values:
+            if (value < last_min) and (value not in min_values):
+                last_min = value
+                last_index = values.index(value)
+        index.append(last_index)
+        min_values.append(last_min)
+        last_min = float("inf")
+
+    return index
+
+
+def trilateracion(balizas, real, ideal):
+    medidas = real.sense(balizas)
+    # posiciones de las 3 balizas más cercanas
+    indices = get_index_of_n_min_values(medidas[0:-1], 3)
+
+    P = [balizas[i] for i in indices] # coordenadas de 3 balizas
+    V = np.subtract([0,0], P[0]) # offset
+    Q = [np.add(coordenada,V) for coordenada in P] # P + offset
+    if (Q[2][1] is not 0): # si Q2 no está en el eje x
+        # θ = acos(Qx / |Q|)
+        theta = acos(Q[2][0]/sqrt(pow(Q[2][0], 2) + pow(Q[2][1], 2))
+        R = [
+            [cos(theta), -sin(theta)],
+            [sin(theta), cos(theta)] ]
+
+
 
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
   # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
@@ -110,9 +141,9 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
                               centro[1]-radio,centro[1]+radio])
     balT = np.array(balizas).T.tolist();
     plt.plot(balT[0],balT[1],'or',ms=10) #rojo
-    plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2) #magenta
+    plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2) #rosa
     ideal.set(*xyMaxPeso)
-    plt.plot(ideal.x,ideal.y,'D',c='#00ffff',ms=10,mew=2) #cyan
+    #plt.plot(ideal.x,ideal.y,'D',c='#00ffff',ms=10,mew=2) #cyan
     plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2) #verde
     plt.show()
     raw_input()
@@ -141,8 +172,8 @@ trayectorias = [
     ]
 
 # Definici�n de los puntos objetivo:
-if len(sys.argv)<3 or int(sys.argv[1])<0 or int(sys.argv[1])>=len(trayectorias):
-  sys.exit(sys.argv[0]+" <�ndice entre 0 y "+str(len(trayectorias)-1)+">, 1 = no mostrar, 0 = mostrar")
+if len(sys.argv)<2 or int(sys.argv[1])<0 or int(sys.argv[1])>=len(trayectorias):
+  sys.exit(sys.argv[0]+" <�ndice entre 0 y "+str(len(trayectorias)-1)+">, 1 = no mostrar")
 objetivos = trayectorias[int(sys.argv[1])]
 
 # Definici�n de constantes:
@@ -152,7 +183,7 @@ W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 
 ########### PESOS BASADOS EN MÁXIMOS PESOS #####################
 DIVISOR = 50
-PESO_SCRIPT = [ 2.9,  6.3, 44.38, 85.88, 371.65]
+PESO_SCRIPT = [ 0.00001,  6.3, 44.38, 85.88, 371.65]
 ############PESOS MÁXIMOS RECOGIDOS / DIVISOR###################
 ############# Parámetros para localización #####################
 PESO_LOCALIZACION = PESO_SCRIPT[int(sys.argv[1])]             # Minimo peso en measurement prob
@@ -201,7 +232,8 @@ for punto in objetivos:
 
     if (peso_medidas < PESO_LOCALIZACION):
         #print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
-        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
+        trilateracion(objetivos, real, ideal)
+        #localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
         #print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
 
     w = angulo_rel(pose,punto)
