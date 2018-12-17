@@ -156,7 +156,7 @@ PESO_LOCALIZACION = PESO_SCRIPT[int(sys.argv[1])]             # Minimo peso en m
 MAXPESO = float("-inf")
 MINPESO = float("inf")
 
-N = 11 # Matriz NxN
+N = 21 # Matriz NxN
 if (N % 2) is 0: # ==> N tiene que ser impar !!!
     N += 1
 RADIO = 0.5
@@ -165,12 +165,12 @@ MOSTRAR = sys.argv[2]
 ################################################################
 ideal = robot()
 ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
-ideal.set(*P_INICIAL)     # operador 'splat'
+#ideal.set(*P_INICIAL)     # operador 'splat'
 
 real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
-#localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, MOSTRAR)
+localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 1)
 
 random.seed(0)
 tray_ideal = [ideal.pose()]   # Trayectoria percibida
@@ -187,14 +187,15 @@ for punto in objetivos:
     medidas = real.sense(objetivos)
     peso_medidas = ideal.measurement_prob(medidas, objetivos)
 
+    print peso_medidas
     if (MINPESO > peso_medidas):
         MINPESO = peso_medidas
     elif (MAXPESO < peso_medidas):
         MAXPESO = peso_medidas
 
-    if (peso_medidas < PESO_LOCALIZACION):
+    if (peso_medidas < 0.0001):
         print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
-        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, MOSTRAR)
+        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
         print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
 
     w = angulo_rel(pose,punto)
