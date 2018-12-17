@@ -82,11 +82,13 @@ def trilateracion(balizas, real, ideal):
     if (Q[2][1] is not 0): # si Q2 no está en el eje x
         # θ = acos(Qx / |Q|)
         theta = acos(Q[2][0]/sqrt(pow(Q[2][0], 2) + pow(Q[2][1], 2))
-        R = [
-            [cos(theta), -sin(theta)],
-            [sin(theta), cos(theta)] ]
+        R = [[cos(theta), -sin(theta)],
+            [sin(theta), cos(theta)]]
 
-
+        S = []
+        for i in range(3):
+           S.append([np.sum(np.dot(R[0], Q[i][0])],
+               [np.sum(np.dot(R[1], Q[i][1])])
 
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
   # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
