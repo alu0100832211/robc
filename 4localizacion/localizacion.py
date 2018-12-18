@@ -69,14 +69,14 @@ def get_index_of_n_min_values(values, n):
         last_min = float("inf")
     return index
 
-def solve_trilateracion(S, r):
+def solve_trilateracion(S, r, last_pos):
     d = S[1][0]
     i = S[2][0]
     j = S[2][1]
 
     if d == 0.0 or j == 0.0:
-       print "No hay solucion para " + str(S)
-       return [1,1]
+        print "No hay solucion para " + str(S) + " devolviendo " + str(last_pos[:2])
+        return last_pos[:2]
 
     x = (pow(r[0],2) - pow(r[1],2) + pow(d, 2))/(2*d)
     y = (pow(r[0],2) - pow(r[2],2) + pow(i,2) + pow(j,2))/((2*j)-(i/j)*x)
@@ -86,23 +86,20 @@ def solve_trilateracion(S, r):
 
 def rotate_points(theta, Q):
     #https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions
-    print "Theta =  " + str(theta)
+    #print "Theta =  " + str(theta)
     R = [[cos(theta), -sin(theta)],
             [sin(theta), cos(theta)]]
     S = []
     for i in range(len(Q)):
-        print "P " + str(i)
         newX = R[0][0]*Q[i][0] + R[0][1]*Q[i][1]
         newX = round(newX, 5)
-        print str(newX)
         newY = R[1][0]*Q[i][0] + R[1][1]*Q[i][1]
         newY = round(newY, 5)
-        print str(newY)
         S.append([newX, newY])
     return S
 
 def trilateracion(balizas, real, ideal):
-    #https://stackoverflow.com/questions/16176656/trilateration-and-locating-the-point-x-y-z
+    # https://stackoverflow.com/questions/16176656/trilateration-and-locating-the-point-x-y-z
     medidas = real.sense(balizas)
     # posiciones de las 3 balizas más cercanas
     indices = get_index_of_n_min_values(medidas[0:-1], 3)
@@ -110,19 +107,20 @@ def trilateracion(balizas, real, ideal):
     P = [balizas[i] for i in indices] # coordenadas de 3 balizas
     V = np.subtract([0,0], P[0]) # offset
     Q = [np.add(coordenada,V) for coordenada in P] # P + offset
-    if (Q[2][1] is not 0): # si Q2 no está en el eje x
+    if (Q[1][1] != 0): # si Q2 no está en el eje x
         # ángulo entre Q2 y el eje X
         # θ = acos(Qx / |Q|)
-        theta = acos(Q[2][0]/sqrt(pow(Q[2][0], 2) + pow(Q[2][1], 2)))
+        theta = acos(Q[1][0]/sqrt(pow(Q[1][0], 2) + pow(Q[1][1], 2)))
+        if (Q[1][1] < 0): # Cuadrantes 3 y 4
+            theta = 2*pi - theta
         S = rotate_points(-theta, Q) #cerrar el ángulo
-        M = solve_trilateracion(S, [medidas[i] for i in indices])
-        print "M " + str(M)
+        M = solve_trilateracion(S, [medidas[i] for i in indices], ideal.pose())
+        #print "M " + str(M)
         M = rotate_points(theta, [M])[0] #deshacer rotacion
     else:
-        M = solve_trilateracion(S, [medidas[i] for i in indices])
-
+        M = solve_trilateracion(Q, [medidas[i] for i in indices], ideal.pose())
     M = np.subtract(M, V) #deshacer offset
-    #Mover el robot a M
+
     ideal.set(M[0], M[1], medidas[-1])
 
 
@@ -242,7 +240,7 @@ ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
 #ideal.set(*P_INICIAL)     # operador 'splat'
 
 real = robot()
-real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
+real.set_noise(.01,.01,0)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
 localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 0)
 
@@ -254,6 +252,12 @@ tiempo  = 0.
 espacio = 0.
 #random.seed(0)
 random.seed(datetime.now())
+
+if (int(sys.argv[2]) == 1):
+    print "Método de localización por trilateración"
+else:
+    print "Localización normal"
+
 for punto in objetivos:
   while distancia(tray_ideal[-1],punto) > EPSILON and len(tray_ideal) <= 1000:
     pose = ideal.pose()
@@ -270,10 +274,10 @@ for punto in objetivos:
         MAXPESO = peso_medidas
 
     if (peso_medidas < PESO_LOCALIZACION):
-        #print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
-        #trilateracion(objetivos, real, ideal)
-        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
-        #print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
+        if (int(sys.argv[2]) == 1):
+            trilateracion(objetivos, real, ideal)
+        else:
+            localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
