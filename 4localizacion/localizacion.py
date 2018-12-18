@@ -92,9 +92,6 @@ def trilateracion(balizas, real, ideal):
     medidas = real.sense(balizas)
     # posiciones de las 3 balizas más cercanas
     indices = get_index_of_n_min_values(medidas[0:-1], 3)
-    print medidas
-    print indices
-    print [balizas[i] for i in indices]
 
     P = [balizas[i] for i in indices] # coordenadas de 3 balizas
     V = np.subtract([0,0], P[0]) # offset
