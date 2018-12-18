@@ -67,7 +67,6 @@ def get_index_of_n_min_values(values, n):
         index.append(last_index)
         min_values.append(last_min)
         last_min = float("inf")
-
     return index
 
 def solve_trilateracion(S, r):
@@ -75,8 +74,12 @@ def solve_trilateracion(S, r):
     i = S[2][0]
     j = S[2][1]
 
+    if d == 0.0 or j == 0.0:
+       print "No hay solucion para " + str(S)
+       return [1,1]
+
     x = (pow(r[0],2) - pow(r[1],2) + pow(d, 2))/(2*d)
-    y = (pow(r[0],2) - pow(r[2],2) + pow(i,2) + pow(j,2))/(2*j)-(i/j)*x
+    y = (pow(r[0],2) - pow(r[2],2) + pow(i,2) + pow(j,2))/((2*j)-(i/j)*x)
 
     return [x,y]
 
@@ -88,6 +91,7 @@ def rotate_points(theta, Q):
             [sin(theta), cos(theta)]]
     S = []
     for i in range(len(Q)):
+        print "P " + str(i)
         newX = R[0][0]*Q[i][0] + R[0][1]*Q[i][1]
         newX = round(newX, 5)
         print str(newX)
@@ -113,9 +117,10 @@ def trilateracion(balizas, real, ideal):
         S = rotate_points(-theta, Q) #cerrar el ángulo
         M = solve_trilateracion(S, [medidas[i] for i in indices])
         print "M " + str(M)
-        M = rotate_points(theta, [M]) #deshacer rotacion
+        M = rotate_points(theta, [M])[0] #deshacer rotacion
     else:
         M = solve_trilateracion(S, [medidas[i] for i in indices])
+
     M = np.subtract(M, V) #deshacer offset
     #Mover el robot a M
     ideal.set(M[0], M[1], medidas[-1])
@@ -239,7 +244,7 @@ ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
 real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
-localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 1)
+localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 0)
 
 random.seed(0)
 tray_ideal = [ideal.pose()]   # Trayectoria percibida
@@ -266,8 +271,8 @@ for punto in objetivos:
 
     if (peso_medidas < PESO_LOCALIZACION):
         #print "Antes: %-20s" % (str(np.subtract([real.x, real.y], [ideal.x, ideal.y])))
-        trilateracion(objetivos, real, ideal)
-        #localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
+        #trilateracion(objetivos, real, ideal)
+        localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
         #print "Despues: %-20s" % (str(np.subtract(real.pose()[:2], ideal.pose()[:2])))
 
     w = angulo_rel(pose,punto)
