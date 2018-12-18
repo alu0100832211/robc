@@ -216,23 +216,25 @@ PESO_SCRIPT = [ 0.00001,  6.3, 44.38, 85.88, 371.65]
 ############PESOS MÁXIMOS RECOGIDOS / DIVISOR###################
 ############# Parámetros para localización #####################
 PESO_LOCALIZACION = PESO_SCRIPT[int(sys.argv[1])]             # Minimo peso en measurement prob
-MAXPESO = float("-inf")
-MINPESO = float("inf")
-PESOMEDIO = 0.
-NMEDIDAS = 0
-
 N = 21 # Matriz NxN
 if (N % 2) is 0: # ==> N tiene que ser impar !!!
     N += 1
 RADIO = 0.5
 RADIO_INICIAL = 4
+
+#################### ESTADISTICAS ##############################
+estadistica_MaxPeso = float("-inf")
+estadistica_MinPeso = float("inf")
+estadistica_PesoMedio = 0.
+estadistica_nMedidas = 0
+estadistica_nLocalizaciones = 0
 ################################################################
 ideal = robot()
 ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
 #ideal.set(*P_INICIAL)     # operador 'splat'
 
 real = robot()
-real.set_noise(.01,.01,0)  # Ruido lineal / radial / de sensado
+real.set_noise(.01,.01,0.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
 localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 0)
 
@@ -250,6 +252,7 @@ if (int(sys.argv[2]) == 1):
 else:
     print "Localización normal"
 
+
 for punto in objetivos:
   while distancia(tray_ideal[-1],punto) > EPSILON and len(tray_ideal) <= 1000:
     pose = ideal.pose()
@@ -257,19 +260,20 @@ for punto in objetivos:
     medidas = real.sense(objetivos)
     peso_medidas = ideal.measurement_prob(medidas, objetivos)
 
-    NMEDIDAS += 1
-    PESOMEDIO += peso_medidas
+    estadistica_nMedidas += 1
+    estadistica_PesoMedio += peso_medidas
 
-    if (MINPESO > peso_medidas):
-        MINPESO = peso_medidas
-    elif (MAXPESO < peso_medidas):
-        MAXPESO = peso_medidas
+    if (estadistica_MinPeso > peso_medidas):
+        estadistica_MinPeso = peso_medidas
+    elif (estadistica_MaxPeso < peso_medidas):
+        estadistica_MaxPeso = peso_medidas
 
     if (peso_medidas < PESO_LOCALIZACION):
         if (int(sys.argv[2]) == 1):
             trilateracion(objetivos, real, ideal)
         else:
             localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
+        estadistica_nLocalizaciones += 1
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
@@ -297,8 +301,9 @@ if len(tray_ideal) > 1000:
 print "Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s"
 print "Distancia real al objetivo: "+\
     str(round(distancia(tray_real[-1],objetivos[-1]),3))+"m"
-mostrar(objetivos,tray_ideal,tray_real)  # Representaci�n gr�fica
+print "Número de localizaciones: " + str(estadistica_nLocalizaciones)
+print "Máximo peso: " + str(estadistica_MaxPeso)
+print "Mínimo peso: " + str(estadistica_MinPeso)
+print "Peso medio: " + str(estadistica_PesoMedio/estadistica_nMedidas)
 
-print "Máximo peso: " + str(MAXPESO)
-print "Mínimo peso: " + str(MINPESO)
-print "Peso medio: " + str(PESOMEDIO/NMEDIDAS)
+mostrar(objetivos,tray_ideal,tray_real)  # Representaci�n gr�fica
