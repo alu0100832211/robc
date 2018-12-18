@@ -55,19 +55,8 @@ def mostrar(objetivos,ideal,trayectoria):
   plt.clf()
 
 def get_index_of_n_min_values(values, n):
-    index = []
-    min_values = []
-    last_min = float("inf")
-    last_index = 0
-    for i in range(n):
-        for value in values:
-            if (value < last_min) and (value not in min_values):
-                last_min = value
-                last_index = values.index(value)
-        index.append(last_index)
-        min_values.append(last_min)
-        last_min = float("inf")
-    return index
+    values = np.array(values)
+    return values.argsort()[:n]
 
 def solve_trilateracion(S, r, last_pos):
     d = S[1][0]
@@ -103,6 +92,9 @@ def trilateracion(balizas, real, ideal):
     medidas = real.sense(balizas)
     # posiciones de las 3 balizas más cercanas
     indices = get_index_of_n_min_values(medidas[0:-1], 3)
+    print medidas
+    print indices
+    print [balizas[i] for i in indices]
 
     P = [balizas[i] for i in indices] # coordenadas de 3 balizas
     V = np.subtract([0,0], P[0]) # offset
@@ -212,6 +204,9 @@ trayectorias = [
 if len(sys.argv)<2 or int(sys.argv[1])<0 or int(sys.argv[1])>=len(trayectorias):
   sys.exit(sys.argv[0]+" <�ndice entre 0 y "+str(len(trayectorias)-1)+">, 1 = no mostrar")
 objetivos = trayectorias[int(sys.argv[1])]
+
+if len(objetivos) < 3 and (int(sys.argv[2]) == 1):
+    sys.exit("No se puede calcular trilateracion con menos de dos puntos")
 
 # Definici�n de constantes:
 EPSILON = .1                # Umbral de distancia
