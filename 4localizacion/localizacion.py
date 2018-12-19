@@ -226,7 +226,7 @@ ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
 real = robot()
 real.set_noise(.01,.01,0.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
-localizacion(objetivos, real, ideal, ideal.pose(), RADIO_INICIAL, 0)
+localizacion(objetivos, real, ideal, [0,0,0], RADIO_INICIAL, 0)
 
 random.seed(0)
 tray_ideal = [ideal.pose()]   # Trayectoria percibida
