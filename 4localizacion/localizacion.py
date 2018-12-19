@@ -63,7 +63,7 @@ def solve_trilateracion(S, r, last_pos):
     i = S[2][0]
     j = S[2][1]
 
-    if d == 0.0 or j == 0.0:
+    if d == 0.0 or j == 0.0: # Casos division por 0
         print "No hay solucion para " + str(S) + " devolviendo " + str(last_pos[:2])
         return last_pos[:2]
 
@@ -75,17 +75,9 @@ def solve_trilateracion(S, r, last_pos):
 
 def rotate_points(theta, Q):
     #https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions
-    #print "Theta =  " + str(theta)
     R = [[cos(theta), -sin(theta)],
             [sin(theta), cos(theta)]]
-    S = []
-    for i in range(len(Q)):
-        newX = R[0][0]*Q[i][0] + R[0][1]*Q[i][1]
-        newX = round(newX, 5)
-        newY = R[1][0]*Q[i][0] + R[1][1]*Q[i][1]
-        newY = round(newY, 5)
-        S.append([newX, newY])
-    return S
+    return [np.dot(R, coord) for coord in Q]
 
 def trilateracion(balizas, real, ideal):
     # https://stackoverflow.com/questions/16176656/trilateration-and-locating-the-point-x-y-z
@@ -97,14 +89,12 @@ def trilateracion(balizas, real, ideal):
     V = np.subtract([0,0], P[0]) # offset
     Q = [np.add(coordenada,V) for coordenada in P] # P + offset
     if (Q[1][1] != 0): # si Q2 no está en el eje x
-        # ángulo entre Q2 y el eje X
         # θ = acos(Qx / |Q|)
         theta = acos(Q[1][0]/sqrt(pow(Q[1][0], 2) + pow(Q[1][1], 2)))
         if (Q[1][1] < 0): # Cuadrantes 3 y 4
             theta = 2*pi - theta
         S = rotate_points(-theta, Q) #cerrar el ángulo
         M = solve_trilateracion(S, [medidas[i] for i in indices], ideal.pose())
-        #print "M " + str(M)
         M = rotate_points(theta, [M])[0] #deshacer rotacion
     else:
         M = solve_trilateracion(Q, [medidas[i] for i in indices], ideal.pose())
