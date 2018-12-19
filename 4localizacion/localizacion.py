@@ -27,6 +27,23 @@ def angulo_rel(pose,p):
   while w < -pi: w += 2*pi
   return w
 
+def mostrar_trilateracion(P, M, r):
+    plt.ion()
+    xmin = -10
+    xmax = 10
+    ymin = -10
+    ymax = 10
+    circle1 = plt.Circle((P[0][0], P[0][1]), r[0], color='r', fill=False)
+    circle2 = plt.Circle((P[1][0], P[1][1]), r[1], color='g', fill=False)
+    circle3 = plt.Circle((P[2][0], P[2][1]), r[2], color='b',  fill=False)
+    fig, ax = plt.subplots()
+    ax.set_xlim([xmin,xmax])
+    ax.set_ylim([ymin,ymax])
+    ax.add_artist(circle1)
+    ax.add_artist(circle2)
+    ax.add_artist(circle3)
+    raw_input()
+
 def mostrar(objetivos,ideal,trayectoria):
   # Mostrar objetivos y trayectoria:
   plt.ion() # modo interactivo
@@ -79,12 +96,12 @@ def rotate_points(theta, Q):
             [sin(theta), cos(theta)]]
     return [np.dot(R, coord) for coord in Q]
 
-def trilateracion(balizas, real, ideal):
+def trilateracion(balizas, real, ideal, mostrar=0):
     # https://stackoverflow.com/questions/16176656/trilateration-and-locating-the-point-x-y-z
     medidas = real.sense(balizas)
     # posiciones de las 3 balizas más cercanas
     indices = get_index_of_n_min_values(medidas[0:-1], 3)
-
+    r = [medidas[i] for i in indices]
     P = [balizas[i] for i in indices] # coordenadas de 3 balizas
     V = np.subtract([0,0], P[0]) # offset
     Q = [np.add(coordenada,V) for coordenada in P] # P + offset
@@ -94,15 +111,14 @@ def trilateracion(balizas, real, ideal):
         if (Q[1][1] < 0): # Cuadrantes 3 y 4
             theta = 2*pi - theta
         S = rotate_points(-theta, Q) #cerrar el ángulo
-        M = solve_trilateracion(S, [medidas[i] for i in indices], ideal.pose())
+        M = solve_trilateracion(S, r, ideal.pose())
         M = rotate_points(theta, [M])[0] #deshacer rotacion
     else:
-        M = solve_trilateracion(Q, [medidas[i] for i in indices], ideal.pose())
+        M = solve_trilateracion(Q, r, ideal.pose())
     M = np.subtract(M, V) #deshacer offset
-
+    if mostrar:
+        mostrar_trilateracion(P, M, r)
     ideal.set(M[0], M[1], medidas[-1])
-
-
 
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
   # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
@@ -110,12 +126,9 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
 
   # Medidas del robot real
   medidas = real.sense(balizas)
-
   # Probar moviendo las posiciones del robot ideal
   # En cada posicion de la matriz
-
   distCelda = float(2.0*float(radio)/float(N))
-
 
   def posCasilla(fila, columna, ancho):
      x = columna*ancho + ancho/2
@@ -144,9 +157,7 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
           if (maxPeso < peso):
               maxPeso = peso
               xyMaxPeso = ideal.pose()
-
           imagen[i][j] = peso
-
 
   if mostrar:
     plt.ion() # modo interactivo
@@ -260,7 +271,7 @@ for punto in objetivos:
 
     if (peso_medidas < PESO_LOCALIZACION):
         if (int(sys.argv[2]) == 1):
-            trilateracion(objetivos, real, ideal)
+            trilateracion(objetivos, real, ideal, 0)
         else:
             localizacion(objetivos, real, ideal, ideal.pose(), RADIO, 0)
         estadistica_nLocalizaciones += 1
