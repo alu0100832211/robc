@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import sys
 import select
 from datetime import datetime
+import time
 # ******************************************************************************
 # Declaración de funciones
 def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
@@ -72,7 +73,8 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     plt.plot(ideal.x,ideal.y,'D',c='#00ffff',ms=10,mew=2) #cyan
     plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2) #verde
     plt.show()
-    raw_input()
+    #raw_input()
+    time.sleep(0.1)
     plt.clf()
   else:
     ideal.set(*xyMaxPeso)
@@ -121,7 +123,8 @@ def mostrar(objetivos,trayectoria,trayectreal,filtro):
   plt.draw()
 #  if sys.stdin in select.select([sys.stdin],[],[],.01)[0]:
 #    line = sys.stdin.readline()
-  raw_input()
+  #raw_input()
+  time.sleep(0.1)
 
 def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
     # Inicialización de un filtro de tamaño 'num_particulas', cuyas partículas
@@ -131,7 +134,7 @@ def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
     for i in range(num_particulas):
         xPos = random.uniform(centro[0]-radio, centro[0]+radio+1)
         yPos = random.uniform(centro[1]-radio, centro[1]+radio+1)
-        theta = random.uniform(0, 2*pi)
+        theta = real.sense(balizas)[-1]
         filtro[i].set(xPos, yPos, theta)
 
     return filtro
@@ -173,7 +176,7 @@ GIROPARADO = 0         # Si tiene que tener vel. lineal 0 para girar
 LONGITUD   = .1        # Longitud del robot
 
 N_PARTIC  = 50         # Tamaño del filtro de partículas
-N_INICIAL = 2000       # Tamaño inicial del filtro
+N_INICIAL = 200       # Tamaño inicial del filtro
 
 # Definición de trayectorias:
 trayectorias = [
@@ -201,6 +204,7 @@ W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 real = robot()
 real.set_noise(.01,.01,.01) # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
+print "pose del robot real " + str(P_INICIAL)
 
 #inicialización del filtro de partículas y de la trayectoria
 filtro = genera_filtro(N_INICIAL, objetivos, real, [2,2], 3)
@@ -208,14 +212,17 @@ trayectoria = []
 trayectoria.append(hipotesis(filtro))
 #def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
 trayectreal = [real.pose()]
+print "Inicio"
 mostrar(objetivos,trayectoria,trayectreal,filtro)
 
 tiempo  = 0.
 espacio = 0.
 for punto in objetivos:
   while distancia(trayectoria[-1],punto) > EPSILON and len(trayectoria) <= 1000:
+    print "Iteracion " + str(len(trayectreal))
     #seleccionar pose
-    pose = hipotesis(filtro)
+    pose = np.add(real.pose(), [1,0,0])
+    print "Pose hipotesis filtro " + str(pose)
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
@@ -231,13 +238,15 @@ for punto in objetivos:
       real.move_triciclo(w,v,LONGITUD)
 
     # Seleccionar hipótesis de localización y actualizar la trayectoria
+    for p in filtro:
+        p.move(w,v)
 
     trayectreal.append(pose)
 
     mostrar(objetivos,trayectoria,trayectreal,filtro)
 
     # remuestreo
-    filtro = remuestreo(filtro)
+    filtro = resample(filtro, N_INICIAL)
 
     espacio += v
     tiempo  += 1
