@@ -14,71 +14,10 @@ import sys
 import select
 from datetime import datetime
 import time
+import logging
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 # ******************************************************************************
 # Declaración de funciones
-def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
-  # Buscar la localización más probable del robot, a partir de su sistema
-  # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
-  # Medidas del robot real
-  medidas = real.sense(balizas)
-
-  # Probar moviendo las posiciones del robot ideal
-  # En cada posicion de la matriz
-
-  distCelda = float(2.0*float(radio)/float(N))
-
-
-  def posCasilla(fila, columna, ancho):
-     x = columna*ancho + ancho/2
-     y = fila*ancho + ancho/2
-     return [x,y]
-
-  imagen = [[-1. for x in range(N)] for y in range(N)]
-
-  xyCentro = posCasilla(N/2, N/2, distCelda)
-  idealCentro = [centro[0], centro[1]]
-  maxPeso = float("-inf")
-
-  # Guardar peso al mover el robot a una casilla de la matriz
-  for i in range(N):
-      for j in range(N):
-          #Mover robot ideal a esa posicion
-          #Nueva x:
-          xyCasilla = posCasilla(i, j, distCelda)
-          xyTransform = np.subtract(xyCasilla, xyCentro)
-          xyIdeal = np.add(xyTransform, idealCentro)
-
-          ideal.set(xyIdeal[0], xyIdeal[1], medidas[-1])
-
-          peso = ideal.measurement_prob(medidas, objetivos)
-
-          if (maxPeso < peso):
-              maxPeso = peso
-              xyMaxPeso = ideal.pose()
-
-          imagen[i][j] = peso
-
-
-  if mostrar:
-    plt.ion() # modo interactivo
-    plt.xlim(centro[0]-radio,centro[0]+radio)
-    plt.ylim(centro[1]-radio,centro[1]+radio)
-    imagen.reverse()
-    plt.imshow(imagen,extent=[centro[0]-radio,centro[0]+radio,\
-                              centro[1]-radio,centro[1]+radio])
-    balT = np.array(balizas).T.tolist();
-    plt.plot(balT[0],balT[1],'or',ms=10) #rojo
-    plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2) #magenta
-    ideal.set(*xyMaxPeso)
-    plt.plot(ideal.x,ideal.y,'D',c='#00ffff',ms=10,mew=2) #cyan
-    plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2) #verde
-    plt.show()
-    #raw_input()
-    time.sleep(0.1)
-    plt.clf()
-  else:
-    ideal.set(*xyMaxPeso)
-
 def distancia(a,b):
   # Distancia entre dos puntos (admite poses)
   return np.linalg.norm(np.subtract(a[:2],b[:2]))
@@ -123,45 +62,36 @@ def mostrar(objetivos,trayectoria,trayectreal,filtro):
   plt.draw()
 #  if sys.stdin in select.select([sys.stdin],[],[],.01)[0]:
 #    line = sys.stdin.readline()
-  #raw_input()
-  time.sleep(0.1)
+  raw_input()
 
 def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
     # Inicialización de un filtro de tamaño 'num_particulas', cuyas partículas
     # imitan a la muestra dada y se distribuyen aleatoriamente sobre un área dada
     # Filtro es un vector de num_particulas objetos robot con posiciones aleatorias dentro del rango especificado
-    filtro = [robot() for x in range(num_particulas)]
-    for i in range(num_particulas):
-        xPos = random.uniform(centro[0]-radio, centro[0]+radio+1)
-        yPos = random.uniform(centro[1]-radio, centro[1]+radio+1)
-        theta = real.sense(balizas)[-1]
-        filtro[i].set(xPos, yPos, theta)
-
+    medidas = real.sense(balizas)
+    theta = medidas[-1]
+    filtro = [real.copy() for x in range(num_particulas)]
+    for p in filtro:
+        x = random.uniform(centro[0]-radio, centro[0]+radio+1)
+        y = random.uniform(centro[1]-radio, centro[1]+radio+1)
+        p.set(x,y,theta)
+        p.measurement_prob(medidas, balizas)
     return filtro
 
 def dispersion(filtro):
-    # Calcular distancia entre los dos puntos
-    # que tienen (minx, miny), (maxx, maxy)
+    # Calcular distancia
+    x = [p.x for p in filtro]
+    y = [p.y for p in filtro]
 
-    max_x = float("-inf")
-    max_y = float("-inf")
-    min_x = float("inf")
-    min_y = float("inf")
-
-    particula_min = []
-    particula_max = []
-    for particula in filtro:
-        if (particula[0] > max_x and particula[1] > max_y):
-            particula_max = particula
-        elif (particula[0] > min_x and particula[1] > min_x):
-            particula_min = particula
-
-    return np.linalg.norm(np.subtract(particula_max, particula_min))
+    return distancia([max(x), max(y)], [min(x), min(y)])
 
 def peso_medio(filtro):
   # Peso medio normalizado del filtro de particulas
-  pass
-
+  maximo = max([p.weight for p in filtro])
+  if maximo:
+      return sum([p.weight/maximo for p in filtro])/len(filtro)
+  else:
+      return 0
 # ******************************************************************************
 
 random.seed(0)
@@ -176,7 +106,7 @@ GIROPARADO = 0         # Si tiene que tener vel. lineal 0 para girar
 LONGITUD   = .1        # Longitud del robot
 
 N_PARTIC  = 50         # Tamaño del filtro de partículas
-N_INICIAL = 200       # Tamaño inicial del filtro
+N_INICIAL = 2000       # Tamaño inicial del filtro
 
 # Definición de trayectorias:
 trayectorias = [
@@ -204,25 +134,54 @@ W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 real = robot()
 real.set_noise(.01,.01,.01) # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
-print "pose del robot real " + str(P_INICIAL)
+logging.debug("pose inicial del robot real " + str(P_INICIAL))
 
 #inicialización del filtro de partículas y de la trayectoria
-filtro = genera_filtro(N_INICIAL, objetivos, real, [2,2], 3)
-trayectoria = []
-trayectoria.append(hipotesis(filtro))
 #def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
-trayectreal = [real.pose()]
-print "Inicio"
-mostrar(objetivos,trayectoria,trayectreal,filtro)
+filtro = []
+trayectoria = []
+trayectreal = []
+peso_medio_filtro = 0
+while(peso_medio_filtro == 0):
+  filtro = genera_filtro(N_INICIAL, objetivos, real, [random.uniform(0,5),random.uniform(0,5)])
+  pose = hipotesis(filtro)
+  trayectoria = [pose]
+  trayectreal = [real.pose()]
+  mostrar(objetivos,trayectoria,trayectreal,filtro)
+  peso_medio_filtro = peso_medio(filtro)
 
 tiempo  = 0.
 espacio = 0.
+
+estadistica_nResample = 0
+estadistica_nFiltros = 0
+PESO_PERFECTO = real.Gaussian(1, real.sense_noise, 1) \
+        ** len(objetivos)+1
+PESO_ACEPTABLE = real.Gaussian(1, real.sense_noise, 2) \
+        ** len(objetivos)+1
+logging.debug("PESO_ACEPTABLE : " + str(PESO_ACEPTABLE))
+logging.debug("PESO_PERFECTO : " + str(PESO_PERFECTO))
 for punto in objetivos:
   while distancia(trayectoria[-1],punto) > EPSILON and len(trayectoria) <= 1000:
-    print "Iteracion " + str(len(trayectreal))
+
+    logging.info("Iteracion " + str(len(trayectreal)))
     #seleccionar pose
-    pose = np.add(real.pose(), [1,0,0])
-    print "Pose hipotesis filtro " + str(pose)
+    logging.debug("Filtro: " + str(filtro))
+    logging.info("Peso medio filtro: " + str(peso_medio(filtro)))
+    logging.info("Dispersión: " + str(dispersion(filtro)))
+    # remuestreo
+    if (dispersion(filtro) > 0.5):
+        logging.info("Resample " + str(estadistica_nResample))
+        filtro = resample(filtro, N_PARTIC)
+        for p in filtro:
+            p.measurement_prob(real.sense(objetivos), objetivos)
+        mostrar(objetivos,trayectoria,trayectreal,filtro)
+        estadistica_nResample += 1
+    if(peso_medio(filtro) > 0.04):
+      logging.info("Generando nuevo filtro: " +  str(estadistica_nFiltros))
+      estadistica_nFiltros += 1
+      filtro = genera_filtro(N_PARTIC, objetivos, real, pose[:2], 1)
+      mostrar(objetivos,trayectoria,trayectreal,filtro)
 
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
@@ -234,19 +193,21 @@ for punto in objetivos:
       if GIROPARADO and abs(w) > .01:
           v = 0
       real.move(w,v)
+      for p in filtro:
+          p.move(w,v)
     else:
-      real.move_triciclo(w,v,LONGITUD)
+      real.move_triciclo(w,v, LONGITUD)
+      for p in filtro:
+          p.move_triciclo(w,v, LONGITUD)
 
     # Seleccionar hipótesis de localización y actualizar la trayectoria
     for p in filtro:
-        p.move(w,v)
-
-    trayectreal.append(pose)
-
+        p.measurement_prob(real.sense(objetivos), objetivos)
+    pose = hipotesis(filtro)
+    trayectreal.append(real.pose())
+    trayectoria.append(pose)
     mostrar(objetivos,trayectoria,trayectreal,filtro)
 
-    # remuestreo
-    filtro = resample(filtro, N_INICIAL)
 
     espacio += v
     tiempo  += 1
@@ -257,4 +218,5 @@ print "Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s"
 print "Error medio de la trayectoria: "+str(round(sum(\
     [distancia(trayectoria[i],trayectreal[i])\
     for i in range(len(trayectoria))])/tiempo,3))+"m"
+
 raw_input()

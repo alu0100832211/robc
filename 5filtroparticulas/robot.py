@@ -104,6 +104,10 @@ def hipotesis(pf):
   # Pose de la partícula de mayor peso del filtro de partículas.
   return max(pf,key=lambda r:r.weight).pose()
 
+def hipotesis(pf):
+  # Pose de la partícula de mayor peso del filtro de partículas.
+  return max(pf,key=lambda r:r.weight).pose()
+
 def resample(pf_in, particulas):
   # Remuestreo
   histograma_acumulativo = [0]
