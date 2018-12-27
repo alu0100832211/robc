@@ -64,6 +64,7 @@ class robot:
     dist = float(forward) + random.gauss(0., self.forward_noise)
     self.x += cos(self.orientation) * dist
     self.y += sin(self.orientation) * dist
+    return self.pose()
 
   def move_triciclo(self, turn, forward, largo):
     # Modificar pose del robot (Ackermann)
@@ -104,9 +105,9 @@ def hipotesis(pf):
   # Pose de la partícula de mayor peso del filtro de partículas.
   return max(pf,key=lambda r:r.weight).pose()
 
-def hipotesis(pf):
+def hipotesis_particula(pf):
   # Pose de la partícula de mayor peso del filtro de partículas.
-  return max(pf,key=lambda r:r.weight).pose()
+  return max(pf,key=lambda r:r.weight)
 
 def resample(pf_in, particulas):
   # Remuestreo

@@ -15,7 +15,7 @@ import select
 from datetime import datetime
 import time
 import logging
-logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 # ******************************************************************************
 # Declaración de funciones
 def distancia(a,b):
@@ -142,19 +142,26 @@ filtro = []
 trayectoria = []
 trayectreal = []
 peso_medio_filtro = 0
+# Generar filtro con centro aleatorio hasta que se encuentre una partícula
+# adecuada
 while(peso_medio_filtro == 0):
   filtro = genera_filtro(N_INICIAL, objetivos, real, [random.uniform(0,5),random.uniform(0,5)])
+  particula = hipotesis_particula(filtro)
   pose = hipotesis(filtro)
+  if particula.pose() != pose:
+      logging.error("hipotesis_particula(filtro) no coincide con hipotesis(filtro)")
   trayectoria = [pose]
   trayectreal = [real.pose()]
   mostrar(objetivos,trayectoria,trayectreal,filtro)
   peso_medio_filtro = peso_medio(filtro)
+  logging.debug("Peso medio filtro: " + str(peso_medio_filtro))
 
 tiempo  = 0.
 espacio = 0.
 
 estadistica_nResample = 0
 estadistica_nFiltros = 0
+estadistica_maxPesoMedio = float("-inf")
 PESO_PERFECTO = real.Gaussian(1, real.sense_noise, 1) \
         ** len(objetivos)+1
 PESO_ACEPTABLE = real.Gaussian(1, real.sense_noise, 2) \
@@ -163,10 +170,11 @@ logging.debug("PESO_ACEPTABLE : " + str(PESO_ACEPTABLE))
 logging.debug("PESO_PERFECTO : " + str(PESO_PERFECTO))
 for punto in objetivos:
   while distancia(trayectoria[-1],punto) > EPSILON and len(trayectoria) <= 1000:
-
+    if peso_medio(filtro) > estadistica_maxPesoMedio:
+        estadistica_maxPesoMedio = peso_medio(filtro)
     logging.info("Iteracion " + str(len(trayectreal)))
     #seleccionar pose
-    logging.debug("Filtro: " + str(filtro))
+    #logging.debug("Filtro: " + str(filtro))
     logging.info("Peso medio filtro: " + str(peso_medio(filtro)))
     logging.info("Dispersión: " + str(dispersion(filtro)))
     # remuestreo
@@ -177,12 +185,12 @@ for punto in objetivos:
             p.measurement_prob(real.sense(objetivos), objetivos)
         mostrar(objetivos,trayectoria,trayectreal,filtro)
         estadistica_nResample += 1
-    if(peso_medio(filtro) > 0.04):
+    if (peso_medio(filtro) > 0.0):
+      logging.info("Peso medio filtro: " + str(peso_medio(filtro)))
       logging.info("Generando nuevo filtro: " +  str(estadistica_nFiltros))
       estadistica_nFiltros += 1
       filtro = genera_filtro(N_PARTIC, objetivos, real, pose[:2], 1)
       mostrar(objetivos,trayectoria,trayectreal,filtro)
-
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
     if w < -W: w = -W
@@ -199,16 +207,15 @@ for punto in objetivos:
       real.move_triciclo(w,v, LONGITUD)
       for p in filtro:
           p.move_triciclo(w,v, LONGITUD)
-
-    # Seleccionar hipótesis de localización y actualizar la trayectoria
+    trayectreal.append(real.pose())
+    trayectoria.append(particula.pose())
     for p in filtro:
         p.measurement_prob(real.sense(objetivos), objetivos)
-    pose = hipotesis(filtro)
-    trayectreal.append(real.pose())
-    trayectoria.append(pose)
     mostrar(objetivos,trayectoria,trayectreal,filtro)
-
-
+    particula = hipotesis_particula(filtro)
+    pose = hipotesis(filtro)
+    if particula.pose() != pose:
+        logging.error("hipotesis_particula(filtro) no coincide con particula(filtro)")
     espacio += v
     tiempo  += 1
 
@@ -218,5 +225,6 @@ print "Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s"
 print "Error medio de la trayectoria: "+str(round(sum(\
     [distancia(trayectoria[i],trayectreal[i])\
     for i in range(len(trayectoria))])/tiempo,3))+"m"
+logging.info("Máximo peso medio del filtro: " + str(estadistica_maxPesoMedio))
 
 raw_input()
