@@ -1,0 +1,13 @@
+1. Generar un filtro en el que esté hayan particulas con buen peso
+2. Seleccionar la hipotesis
+3. Robot real = pose inicial
+   Robot ideal = pose hipotesis
+############################################################
+4. Mover el robot real e ideal partiendo de la pose de la hipotesis
+5. Trayectoria real = real.pose()
+   Trayectoria ideal = pose particula hipotesis despues de moverla
+6. Actualizar pesos
+7. Seleccionar nueva hipotesis
+8. Si la dispersión es mucha -> hacer resample
+9. Si las particulas estan lejos -> generar nuevo filtro
+############################################################
