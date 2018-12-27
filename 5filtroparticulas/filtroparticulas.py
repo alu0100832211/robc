@@ -185,11 +185,11 @@ for punto in objetivos:
             p.measurement_prob(real.sense(objetivos), objetivos)
         mostrar(objetivos,trayectoria,trayectreal,filtro)
         estadistica_nResample += 1
-    if (peso_medio(filtro) > 0.0):
+    if (peso_medio(filtro) > 0.04):
       logging.info("Peso medio filtro: " + str(peso_medio(filtro)))
       logging.info("Generando nuevo filtro: " +  str(estadistica_nFiltros))
       estadistica_nFiltros += 1
-      filtro = genera_filtro(N_PARTIC, objetivos, real, pose[:2], 1)
+      filtro = genera_filtro(N_INICIAL, objetivos, real, pose[:2], 3)
       mostrar(objetivos,trayectoria,trayectreal,filtro)
     w = angulo_rel(pose,punto)
     if w > W:  w =  W
