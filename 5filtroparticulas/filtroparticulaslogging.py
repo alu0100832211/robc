@@ -15,7 +15,7 @@ import select
 from datetime import datetime
 import time
 import logging
-logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 # ******************************************************************************
 # Declaraci�n de funciones
 def distancia(a,b):
@@ -62,7 +62,7 @@ def mostrar(objetivos,trayectoria,trayectreal,filtro):
   plt.draw()
 #  if sys.stdin in select.select([sys.stdin],[],[],.01)[0]:
 #    line = sys.stdin.readline()
-  #raw_input()
+  raw_input()
 
 def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
     # Inicializaci�n de un filtro de tama�o 'num_particulas', cuyas part�culas
@@ -134,6 +134,8 @@ W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 real = robot()
 real.set_noise(.01,.01,.01) # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
+logging.debug("pose inicial del robot real " + str(P_INICIAL))
+
 #inicializaci�n del filtro de part�culas y de la trayectoria
 #def genera_filtro(num_particulas, balizas, real, centro=[2,2], radio=3):
 filtro = []
@@ -144,13 +146,15 @@ peso_medio_filtro = 0
 # adecuada
 while(peso_medio_filtro == 0):
   filtro = genera_filtro(N_INICIAL, objetivos, real, [random.uniform(0,5),random.uniform(0,5)])
-
+  particula = hipotesis_particula(filtro)
   pose = hipotesis(filtro)
-
+  if particula.pose() != pose:
+      logging.error("hipotesis_particula(filtro) no coincide con hipotesis(filtro)")
   trayectoria = [pose]
   trayectreal = [real.pose()]
   mostrar(objetivos,trayectoria,trayectreal,filtro)
   peso_medio_filtro = peso_medio(filtro)
+  logging.debug("Peso medio filtro: " + str(peso_medio_filtro))
 
 tiempo  = 0.
 espacio = 0.
@@ -158,18 +162,19 @@ espacio = 0.
 estadistica_nResample = 0
 estadistica_nFiltros = 0
 estadistica_maxPesoMedio = float("-inf")
-# PESO_PERFECTO = real.Gaussian(1, real.sense_noise, 1) \
-#         ** len(objetivos)+1
-# PESO_ACEPTABLE = real.Gaussian(1, real.sense_noise, 2) \
-#         ** len(objetivos)+1
-# logging.debug("PESO_ACEPTABLE : " + str(PESO_ACEPTABLE))
-# logging.debug("PESO_PERFECTO : " + str(PESO_PERFECTO))
+PESO_PERFECTO = real.Gaussian(1, real.sense_noise, 1) \
+        ** len(objetivos)+1
+PESO_ACEPTABLE = real.Gaussian(1, real.sense_noise, 2) \
+        ** len(objetivos)+1
+logging.debug("PESO_ACEPTABLE : " + str(PESO_ACEPTABLE))
+logging.debug("PESO_PERFECTO : " + str(PESO_PERFECTO))
 for punto in objetivos:
   while distancia(trayectoria[-1],punto) > EPSILON and len(trayectoria) <= 1000:
     if peso_medio(filtro) > estadistica_maxPesoMedio:
         estadistica_maxPesoMedio = peso_medio(filtro)
     logging.info("Iteracion " + str(len(trayectreal)))
     #seleccionar pose
+    #logging.debug("Filtro: " + str(filtro))
     logging.info("Peso medio filtro: " + str(peso_medio(filtro)))
     logging.info("Dispersi�n: " + str(dispersion(filtro)))
     # remuestreo
@@ -203,13 +208,14 @@ for punto in objetivos:
       for p in filtro:
           p.move_triciclo(w,v, LONGITUD)
     trayectreal.append(real.pose())
-    trayectoria.append(pose)
+    trayectoria.append(particula.pose())
     for p in filtro:
         p.measurement_prob(real.sense(objetivos), objetivos)
     mostrar(objetivos,trayectoria,trayectreal,filtro)
-
+    particula = hipotesis_particula(filtro)
     pose = hipotesis(filtro)
-
+    if particula.pose() != pose:
+        logging.error("hipotesis_particula(filtro) no coincide con particula(filtro)")
     espacio += v
     tiempo  += 1
 
